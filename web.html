@@ -1,0 +1,46 @@
+<html>
+<head>
+<title>Web</title>
+</head>
+
+<body>
+<div id="text_display" style="position:absolute;bottom:0"></div>
+<script>
+
+let last_text_md5 = '';
+
+async function main(){
+    while (true){
+        try {
+            await updateText();
+        } catch (e) {
+            console.log(e);
+        }
+    }
+}
+
+async function updateText(){
+    let response = await fetchWithTimeout('/text?last_text_md5='+last_text_md5, {timeout:2000});
+    let data = await response.json();
+    console.log(data);
+    last_text_md5 = data.text_md5;
+    document.getElementById('text_display').innerHTML = data.text;
+}
+
+async function fetchWithTimeout(url, options = {}) {
+    const { timeout = 8000 } = options;
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+    });
+    clearTimeout(id);
+    return response;
+}
+
+main();
+</script>
+</body>
+
+</html>
