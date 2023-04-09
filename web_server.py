@@ -1,10 +1,13 @@
 import hashlib
 from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 import json
+import os
 from threading import Thread
 import time
 import traceback
 from urllib.parse import parse_qs, urlparse
+
+MY_DIRNAME = os.path.dirname(os.path.abspath(__file__))
 
 class WebServer(BaseHTTPRequestHandler):
 
@@ -12,6 +15,8 @@ class WebServer(BaseHTTPRequestHandler):
         self.runtime = runtime
         self.init_args = runtime.init_args
         self.main_lock = runtime.main_lock
+
+        self.html_dict = {}
 
     def start(self):
         self.thread = Thread(target=self.run)
@@ -23,7 +28,7 @@ class WebServer(BaseHTTPRequestHandler):
 
     def run(self):
         try:
-            self.load_web_html()
+            self.load_html_dict()
 
             print('Starting web server')
             self.server = ThreadingHTTPServer(('',self.init_args.port), MyRequestHandler)
@@ -33,9 +38,13 @@ class WebServer(BaseHTTPRequestHandler):
         except:
             traceback.print_exc()
 
-    def load_web_html(self):
-        with open('web.html', 'rb') as f:
-            self.web_html =  f.read()
+    def load_html_dict(self):
+        # with open('web.html', 'rb') as f:
+        #     self.web_html =  f.read()
+        for fn in os.listdir(MY_DIRNAME):
+            if fn.endswith('.html'):
+                with open(os.path.join(MY_DIRNAME, fn), 'rb') as f:
+                    self.html_dict[fn[:-5]] = f.read()
 
 
 class MyRequestHandler(BaseHTTPRequestHandler):
@@ -44,15 +53,15 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         parsed_path = urlparse(self.path)
         print(parsed_path)
         # print(f'GET request received path={self.path}')
-        if parsed_path.path == '/':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            # self.wfile.write(bytes("<html><head><title>Test</title></head>", "utf-8"))
-            # self.wfile.write(bytes("<body><p>This is a test.</p>", "utf-8"))
-            # self.wfile.write(bytes("</body></html>", "utf-8"))
-            self.wfile.write(self.server.smz_web_server.web_html)
-        elif parsed_path.path == '/text':
+        # if parsed_path.path == '/subtitle':
+        #     self.send_response(200)
+        #     self.send_header('Content-type', 'text/html')
+        #     self.end_headers()
+        #     # self.wfile.write(bytes("<html><head><title>Test</title></head>", "utf-8"))
+        #     # self.wfile.write(bytes("<body><p>This is a test.</p>", "utf-8"))
+        #     # self.wfile.write(bytes("</body></html>", "utf-8"))
+        #     self.wfile.write(self.server.smz_web_server.html_dict['subtitle'])
+        if parsed_path.path == '/text':
             parsed_query = parse_qs(parsed_path.query)
             if 'last_text_md5' in parsed_query:
                 last_text_md5 = parsed_query['last_text_md5'][0]
@@ -72,7 +81,14 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             data = {'text': text, 'text_md5': text_md5}
             self.wfile.write(bytes(json.dumps(data), "utf-8"))
         else:
-            self.send_response(404)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(bytes('Not found', "utf-8"))
+            fn = parsed_path.path[1:]
+            if fn in self.server.smz_web_server.html_dict:
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+                self.wfile.write(self.server.smz_web_server.html_dict[fn])
+            else:
+                self.send_response(404)
+                self.send_header('Content-type', 'text/plain')
+                self.end_headers()
+                self.wfile.write(bytes('Not found', "utf-8"))
