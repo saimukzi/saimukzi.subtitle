@@ -1,5 +1,6 @@
 import hashlib
-import stt
+# import stt
+import audio_listener
 import threading
 import translation_agent
 import web_server
@@ -15,18 +16,29 @@ class Runtime:
         self.main_lock = threading.Condition()
 
     def run(self):
-        self.running = True
+        try:
+            self.running = True
 
-        self.start_web_server()
-        self.start_speech_to_text()
-        # self.start_translation_agent()
+            self.start_web_server()
+            self.audio_listener = audio_listener.AudioListener(self)
+            self.translation_agent = translation_agent.TranslationAgent(self)
 
-        self.wait()
+            self.translation_agent.start()
+            self.audio_listener.start()
 
-        self.running = False
+            self.wait()
+        except:
+            raise
+        finally:
+            self.running = False
 
-        self.stop_web_server()
-        self.stop_speech_to_text()
+            if self.audio_listener is not None:
+                self.audio_listener.stop()
+            if self.translation_agent is not None:
+                self.translation_agent.stop()
+            self.stop_web_server()
+
+        # self.stop_speech_to_text()
 
     def start_web_server(self):
         self.web_server = web_server.WebServer(self)
@@ -35,12 +47,16 @@ class Runtime:
     def stop_web_server(self):
         self.web_server.stop()
 
-    def start_speech_to_text(self):
-        self.speech_to_text = stt.SpeechToText(self)
-        self.speech_to_text.start()
+    # def start_audio_listener(self):
+    #     self.audio_listener = audio_listener.AudioListener(self)
+    #     self.audio_listener.start()
 
-    def stop_speech_to_text(self):
-        self.speech_to_text.stop()
+    # def start_speech_to_text(self):
+    #     self.speech_to_text = stt.SpeechToText(self)
+    #     self.speech_to_text.start()
+
+    # def stop_speech_to_text(self):
+    #     self.speech_to_text.stop()
 
     # def start_translation_agent(self):
     #     self.translation_agent = translation_agent.TranslationAgent(self)
