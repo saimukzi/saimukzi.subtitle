@@ -52,15 +52,6 @@ class MyRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_path = urlparse(self.path)
         print(parsed_path)
-        # print(f'GET request received path={self.path}')
-        # if parsed_path.path == '/subtitle':
-        #     self.send_response(200)
-        #     self.send_header('Content-type', 'text/html')
-        #     self.end_headers()
-        #     # self.wfile.write(bytes("<html><head><title>Test</title></head>", "utf-8"))
-        #     # self.wfile.write(bytes("<body><p>This is a test.</p>", "utf-8"))
-        #     # self.wfile.write(bytes("</body></html>", "utf-8"))
-        #     self.wfile.write(self.server.smz_web_server.html_dict['subtitle'])
         if parsed_path.path == '/text':
             parsed_query = parse_qs(parsed_path.query)
             if 'last_text_md5' in parsed_query:
@@ -68,14 +59,9 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 with self.server.smz_web_server.main_lock:
                     if last_text_md5 == self.server.smz_web_server.runtime.text_md5:
                         self.server.smz_web_server.main_lock.wait(timeout=1)
-            # now = time.time()
             self.send_response(200)
             self.send_header('Content-type', 'text/json')
             self.end_headers()
-            # text = f'Hello {now}'
-            # text_md5 = hashlib.md5(text.encode('utf-8')).hexdigest()
-            # self.server.smz_web_server.runtime.text = text
-            # self.server.smz_web_server.runtime.text_md5 = text_md5
             text = self.server.smz_web_server.runtime.text
             text_md5 = self.server.smz_web_server.runtime.text_md5
             data = {'text': text, 'text_md5': text_md5}
