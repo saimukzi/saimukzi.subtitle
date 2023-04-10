@@ -42,6 +42,9 @@ class AudioListener(object):
             frames_per_buffer=CHUNK,
             stream_callback=self._stream_callback,
         )
+
+        self.runtime.update_status('audio_input_device', info['name'])
+
         print('Audio listener started')
 
     def stop(self):
