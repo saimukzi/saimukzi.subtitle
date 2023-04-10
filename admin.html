@@ -17,11 +17,13 @@
 <hr/>
 
 <table>
-<tr><td>Off &gt; on vol</td ><td><input id="thereshold_off_on_vol_input" /></td><td id="thereshold_off_on_vol_display" ></td></tr>
-<tr><td>Off &gt; on time</td><td><input id="thereshold_off_on_time_input"/></td><td id="thereshold_off_on_time_display"></td></tr>
-<tr><td>On &gt; off vol</td ><td><input id="thereshold_on_off_vol_input" /></td><td id="thereshold_on_off_vol_display" ></td></tr>
-<tr><td>On &gt; off time</td><td><input id="thereshold_on_off_time_input"/></td><td id="thereshold_on_off_time_display"></td></tr>
+<tr><td>Off &gt; on vol</td ><td><input id="thereshold_off_on_vol_input"     /></td><td id="thereshold_off_on_vol_display" ></td></tr>
+<tr><td>Off &gt; on time</td><td><input id="thereshold_off_on_time_input"    /></td><td id="thereshold_off_on_time_display"></td></tr>
+<tr><td>On &gt; off vol</td ><td><input id="thereshold_on_off_vol_input"     /></td><td id="thereshold_on_off_vol_display" ></td></tr>
+<tr><td>On &gt; pause time</td><td><input id="thereshold_on_pause_time_input"/></td><td id="thereshold_on_pause_time_display"></td></tr>
+<tr><td>On &gt; off time</td><td><input id="thereshold_on_off_time_input"    /></td><td id="thereshold_on_off_time_display"></td></tr>
 </table>
+<button type="button" onclick="thereshold_update_onclick()">Update</button>
 
 <hr/>
 
@@ -58,7 +60,11 @@ function off_onclick(){
     fetch('/disable');
 }
 
-async function audio_input_refresh_onclick(){
+function audio_input_refresh_onclick(){
+    refresh_audio_input();
+}
+
+async function refresh_audio_input(){
     console.log('audio_input_refresh_onclick');
     let response = await fetch('/audio_input_device_list');
     let data = await response.json();
@@ -81,12 +87,48 @@ async function audio_input_refresh_onclick(){
 }
 
 async function main(){
+    await refresh_audio_input();
+    await refresh_thereshold();
     while (true){
         try {
             await updateStatus();
         } catch (e) {
             console.log(e);
         }
+    }
+}
+
+async function refresh_thereshold(){
+    let response = await fetchWithTimeout('/status?last_status_hash='+last_status_hash, {timeout:2000});
+    let data = await response.json();
+    console.log(data);
+    document.getElementById('thereshold_off_on_vol_input').value = data.status.thereshold_off_on_vol;
+    document.getElementById('thereshold_off_on_time_input').value = data.status.thereshold_off_on_time;
+    document.getElementById('thereshold_on_off_vol_input').value = data.status.thereshold_on_off_vol;
+    document.getElementById('thereshold_on_pause_time_input').value = data.status.thereshold_on_pause_time;
+    document.getElementById('thereshold_on_off_time_input').value = data.status.thereshold_on_off_time;
+}
+
+async function set_config(dict_input){
+    let dict_input_json = JSON.stringify(dict_input);
+    let dict_input_json_b64 = btoa(dict_input_json);
+    let query_str = '/set_config?config='+dict_input_json_b64;
+    return await fetch(query_str);
+}
+
+async function thereshold_update_onclick(){
+    let dict_input = {
+        'thereshold_off_on_vol':Number(document.getElementById('thereshold_off_on_vol_input').value),
+        'thereshold_off_on_time':Number(document.getElementById('thereshold_off_on_time_input').value),
+        'thereshold_on_off_vol':Number(document.getElementById('thereshold_on_off_vol_input').value),
+        'thereshold_on_pause_time':Number(document.getElementById('thereshold_on_pause_time_input').value),
+        'thereshold_on_off_time':Number(document.getElementById('thereshold_on_off_time_input').value),
+    };
+    let response = await set_config(dict_input);
+    let status = response.status;
+    if (status != 200){
+        alert('Failed to update thereshold');
+        return;
     }
 }
 

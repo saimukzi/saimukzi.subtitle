@@ -158,10 +158,10 @@ class TranslationAgent:
 
     def _push_preactive_buffer(self, generator):
         for content in generator:
-            self.preactive_buffer.append(content)
-            if len(self.preactive_buffer) > 5: # config-able
-                self.preactive_buffer.popleft()
             yield content
+            self.preactive_buffer.append(content)
+            if len(self.preactive_buffer) > self.runtime.thereshold_off_on_time:
+                self.preactive_buffer.popleft()
 
 
     def _noise_filter_generator(self, generator):
@@ -171,7 +171,7 @@ class TranslationAgent:
             content_np = np.frombuffer(content, dtype=np.int16)
             content_np = content_np.astype(np.int32)
             context_diff = content_np.max() - content_np.min()
-            if context_diff >= self.init_args.speech_threshold:
+            if context_diff >= self.runtime.thereshold_off_on_vol:
                 break
 
         if not self.is_running():
@@ -189,15 +189,15 @@ class TranslationAgent:
             content_np = np.frombuffer(content, dtype=np.int16)
             content_np = content_np.astype(np.int32)
             context_diff = content_np.max() - content_np.min()
-            if context_diff < self.init_args.speech_threshold:
+            if context_diff < self.runtime.thereshold_on_off_vol:
                 silence_count += 1
             else:
                 silence_count = 0
-            if silence_count < 5: # config-able
+            if silence_count < self.runtime.thereshold_on_pause_time:
                 while len(silence_buffer) > 0:
                     yield silence_buffer.popleft()
                 yield content
-            elif silence_count < 15: # config-able
+            elif silence_count < self.runtime.thereshold_on_off_time:
                 silence_buffer.append(content)
             else:
                 break

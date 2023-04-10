@@ -1,3 +1,4 @@
+import base64
 import audio_listener
 import hashlib
 from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
@@ -121,6 +122,23 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(bytes('{"result":"OK"}', "utf-8"))
             elif parsed_path.path == '/disable':
                 self.server.smz_web_server.runtime.disable()
+                self.send_response(200)
+                self.send_header('Content-type', 'text/json')
+                self.end_headers()
+                self.wfile.write(bytes('{"result":"OK"}', "utf-8"))
+            elif parsed_path.path == '/set_config':
+                parsed_query = parse_qs(parsed_path.query)
+                if not 'config' in parsed_query:
+                    self.send_response(400)
+                    self.send_header('Content-type', 'text/plain')
+                    self.end_headers()
+                    self.wfile.write(bytes('Bad request', "utf-8"))
+                    return
+                config_dict_json_b64 = parsed_query['config'][0]
+                config_dict_json = base64.b64decode(config_dict_json_b64).decode('utf-8')
+                config_dict = json.loads(config_dict_json)
+                print(config_dict)
+                self.server.smz_web_server.runtime.set_config(config_dict)
                 self.send_response(200)
                 self.send_header('Content-type', 'text/json')
                 self.end_headers()

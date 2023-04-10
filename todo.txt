@@ -1,12 +1,9 @@
 Control panel
 - show time/byte sent
 - show active
-- config off > on thereshold
-- config on > off thereshold
-- config off > on time len
-- config on > off time len
 - config sample storage path
 - config google / azure STT
+- config language code
 
 Sample storge
 

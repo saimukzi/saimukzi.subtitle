@@ -15,7 +15,7 @@ class Runtime:
         self.text = ''
         self.text_md5 = hashlib.md5(self.text.encode('utf-8')).hexdigest()
         self.main_lock = threading.Condition()
-        self.status = {}
+        self.status = {} # for web server to get value, no use in server side logic
         self.status_hash = hashlib.md5(json.dumps(self.status).encode('utf-8')).hexdigest()
         self.audio_input_device_hash = ''
 
@@ -23,6 +23,13 @@ class Runtime:
         self.translation_agent = None
 
         self.update_status('operation','OFF')
+        self.set_config({
+            'thereshold_off_on_vol': self.init_args.speech_threshold,
+            'thereshold_off_on_time': 5,
+            'thereshold_on_off_vol': self.init_args.speech_threshold,
+            'thereshold_on_pause_time': 5,
+            'thereshold_on_off_time': 10,
+        })
 
     def run(self):
         try:
@@ -114,6 +121,15 @@ class Runtime:
     def update_status(self, key, value):
         with self.main_lock:
             self.status[key] = value
+            status_json = json.dumps(self.status)
+            self.status_hash = hashlib.md5(status_json.encode('utf-8')).hexdigest()
+            self.main_lock.notify()
+
+    def set_config(self, config_dict):
+        with self.main_lock:
+            for key, value in config_dict.items():
+                setattr(self, key, value)
+                self.status[key] = value
             status_json = json.dumps(self.status)
             self.status_hash = hashlib.md5(status_json.encode('utf-8')).hexdigest()
             self.main_lock.notify()
