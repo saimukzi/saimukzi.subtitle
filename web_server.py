@@ -1,3 +1,4 @@
+import audio_listener
 import hashlib
 from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 import json
@@ -91,6 +92,27 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                     status_hash = self.server.smz_web_server.runtime.status_hash
                 data = {'status': status, 'status_hash': status_hash}
                 self.wfile.write(bytes(json.dumps(data), "utf-8"))
+            elif parsed_path.path == '/audio_input_device_list':
+                self.send_response(200)
+                self.send_header('Content-type', 'text/json')
+                self.end_headers()
+                audio_input_device_list = audio_listener.get_audio_input_device_list()
+                data = {'audio_input_device_list': audio_input_device_list}
+                self.wfile.write(bytes(json.dumps(data), "utf-8"))
+            elif parsed_path.path == '/set_audio_input_device':
+                parsed_query = parse_qs(parsed_path.query)
+                if not 'hash' in parsed_query:
+                    self.send_response(400)
+                    self.send_header('Content-type', 'text/plain')
+                    self.end_headers()
+                    self.wfile.write(bytes('Bad request', "utf-8"))
+                    return
+                hash = parsed_query['hash'][0]
+                self.server.smz_web_server.runtime.set_audio_input_device_hash(hash)
+                self.send_response(200)
+                self.send_header('Content-type', 'text/json')
+                self.end_headers()
+                self.wfile.write(bytes('{"result":"OK"}', "utf-8"))
             elif parsed_path.path == '/enable':
                 self.server.smz_web_server.runtime.enable()
                 self.send_response(200)

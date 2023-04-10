@@ -36,14 +36,48 @@
 <div id="subtitle_display"></div>
 
 <script>
-function on_onclick(){
-    console.log('on_onclick');
-    fetch('/enable');
+async function on_onclick(){
+    console.log('on_onclick start');
+    
+    await fetch('/disable');
+
+    let response = await fetch('/set_audio_input_device?hash='+document.getElementById('audio_input_select').value);
+    let status = response.status;
+    if (status != 200){
+        alert('Failed to set audio input device');
+        return;
+    }
+
+    await fetch('/enable');
+
+    console.log('on_onclick end');
 }
 
 function off_onclick(){
     console.log('off_onclick');
     fetch('/disable');
+}
+
+async function audio_input_refresh_onclick(){
+    console.log('audio_input_refresh_onclick');
+    let response = await fetch('/audio_input_device_list');
+    let data = await response.json();
+    console.log(data);
+    let select = document.getElementById('audio_input_select');
+    select.innerHTML = '';
+    for (let i=0; i<data.audio_input_device_list.length; i++){
+        let option = document.createElement('option');
+        option.value = data.audio_input_device_list[i]['hash'];
+        option.text = data.audio_input_device_list[i]['name'];
+        select.appendChild(option);
+    }
+    select.value = '';
+
+    response = await fetch('/status');
+    data = await response.json();
+    console.log(data);
+    select.value = data.status.audio_input_device_hash;
+    // select.value = data.audio_input;
 }
 
 async function main(){

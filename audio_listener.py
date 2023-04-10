@@ -1,3 +1,6 @@
+import copy
+import hashlib
+import json
 import pyaudio
 
 RATE = 16000
@@ -15,31 +18,19 @@ class AudioListener(object):
     def start(self):
         print('Starting audio listener...')
         assert(self._audio_stream is None)
+        assert(self._audio_interface is None)
 
+        audio_input_device_list = get_audio_input_device_list()
+        audio_input_device_list = filter(lambda info: info['hash']==self.runtime.audio_input_device_hash, audio_input_device_list)
+        audio_input_device_list = list(audio_input_device_list)
+
+        if len(audio_input_device_list) <= 0:
+            print('No audio input device found')
+            return False
+        
         self._audio_interface = pyaudio.PyAudio()
 
-        info = None
-        for i in range(self._audio_interface.get_device_count()):
-            info0 = self._audio_interface.get_device_info_by_index(i)
-            if info0['maxInputChannels'] <= 0: continue
-            if self.init_args.device not in info0['name']: continue
-            try:
-                if not self._audio_interface.is_format_supported(
-                    rate=RATE,
-                    input_device=info0['index'],
-                    input_channels=1,
-                    input_format=pyaudio.paInt16,
-                ):
-                    continue
-            except:
-                continue
-            if info is not None:
-                if info0['defaultLowInputLatency'] < info['defaultLowInputLatency']:
-                    info = info0
-            else:
-                info = info0
-        
-        assert(info is not None)
+        info = audio_input_device_list[0]
         print(info)
 
         self._audio_stream = self._audio_interface.open(
@@ -70,3 +61,32 @@ class AudioListener(object):
             if self.runtime.translation_agent is not None:
                 self.runtime.translation_agent.on_audio_listener_data(in_data)
         return None, pyaudio.paContinue
+
+def get_audio_input_device_list():
+    audio_interface = pyaudio.PyAudio()
+    ret = _get_audio_input_device_list(audio_interface)
+    audio_interface.terminate()
+    return ret
+
+def _get_audio_input_device_list(audio_interface):
+    device_list = []
+    for i in range(audio_interface.get_device_count()):
+        info = audio_interface.get_device_info_by_index(i)
+        if info['maxInputChannels'] <= 0: continue
+        try:
+            if not audio_interface.is_format_supported(
+                rate=RATE,
+                input_device=info['index'],
+                input_channels=1,
+                input_format=pyaudio.paInt16,
+            ):
+                continue
+        except:
+            continue
+        info0 = copy.deepcopy(info)
+        del info0['index']
+        info0_json = json.dumps(info0, sort_keys=True)
+        info0_json_hash = hashlib.md5(info0_json.encode('utf-8')).hexdigest()
+        info['hash'] = info0_json_hash
+        device_list.append(info)
+    return device_list

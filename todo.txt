@@ -1,7 +1,6 @@
 Control panel
-- show subtitle
 - show time/byte sent
-- config audio input src
+- show active
 - config off > on thereshold
 - config on > off thereshold
 - config off > on time len

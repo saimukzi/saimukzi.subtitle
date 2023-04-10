@@ -17,6 +17,7 @@ class Runtime:
         self.main_lock = threading.Condition()
         self.status = {}
         self.status_hash = hashlib.md5(json.dumps(self.status).encode('utf-8')).hexdigest()
+        self.audio_input_device_hash = ''
 
         self.audio_listener = None
         self.translation_agent = None
@@ -26,6 +27,8 @@ class Runtime:
     def run(self):
         try:
             self.running = True
+
+            self.load_audio_input_device_hash()
 
             self.start_web_server()
 
@@ -70,6 +73,11 @@ class Runtime:
                 self.translation_agent = None
         self.update_status('operation','OFF')
 
+    def set_audio_input_device_hash(self, audio_input_device_hash):
+        with self.main_lock:
+            self.audio_input_device_hash = audio_input_device_hash
+            self.update_status('audio_input_device_hash', audio_input_device_hash)
+
     # def start_audio_listener(self):
     #     self.audio_listener = audio_listener.AudioListener(self)
     #     self.audio_listener.start()
@@ -109,6 +117,19 @@ class Runtime:
             status_json = json.dumps(self.status)
             self.status_hash = hashlib.md5(status_json.encode('utf-8')).hexdigest()
             self.main_lock.notify()
+
+    def load_audio_input_device_hash(self):
+        if self.init_args.device is None:
+            return
+        init_device = self.init_args.device
+        audio_input_device_list = audio_listener.get_audio_input_device_list()
+        audio_input_device_list = filter(lambda info: init_device in info['name'], audio_input_device_list)
+        audio_input_device_list = list(audio_input_device_list)
+        if len(audio_input_device_list) == 0:
+            print('No audio input device found')
+            return
+        print(audio_input_device_list[0])
+        self.set_audio_input_device_hash(audio_input_device_list[0]['hash'])
 
 
 def run(init_args):
