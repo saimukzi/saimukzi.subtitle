@@ -1,5 +1,4 @@
 Control panel
-- on/off
 - show subtitle
 - show time/byte sent
 - config audio input src

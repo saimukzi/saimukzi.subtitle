@@ -58,14 +58,38 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 if 'last_text_md5' in parsed_query:
                     last_text_md5 = parsed_query['last_text_md5'][0]
                     with self.server.smz_web_server.main_lock:
-                        if last_text_md5 == self.server.smz_web_server.runtime.text_md5:
-                            self.server.smz_web_server.main_lock.wait(timeout=1)
+                        timeout = time.time() + 1
+                        while True:
+                            if last_text_md5 != self.server.smz_web_server.runtime.text_md5: break
+                            now = time.time()
+                            if now >= timeout: break
+                            self.server.smz_web_server.main_lock.wait(timeout=timeout-now)
                 self.send_response(200)
                 self.send_header('Content-type', 'text/json')
                 self.end_headers()
-                text = self.server.smz_web_server.runtime.text
-                text_md5 = self.server.smz_web_server.runtime.text_md5
+                with self.server.smz_web_server.main_lock:
+                    text = self.server.smz_web_server.runtime.text
+                    text_md5 = self.server.smz_web_server.runtime.text_md5
                 data = {'text': text, 'text_md5': text_md5}
+                self.wfile.write(bytes(json.dumps(data), "utf-8"))
+            elif parsed_path.path == '/status':
+                parsed_query = parse_qs(parsed_path.query)
+                if 'last_status_hash' in parsed_query:
+                    last_status_hash = parsed_query['last_status_hash'][0]
+                    with self.server.smz_web_server.main_lock:
+                        timeout = time.time() + 1
+                        while True:
+                            if last_status_hash != self.server.smz_web_server.runtime.status_hash: break
+                            now = time.time()
+                            if now >= timeout: break
+                            self.server.smz_web_server.main_lock.wait(timeout=timeout-now)
+                self.send_response(200)
+                self.send_header('Content-type', 'text/json')
+                self.end_headers()
+                with self.server.smz_web_server.main_lock:
+                    status = self.server.smz_web_server.runtime.status
+                    status_hash = self.server.smz_web_server.runtime.status_hash
+                data = {'status': status, 'status_hash': status_hash}
                 self.wfile.write(bytes(json.dumps(data), "utf-8"))
             elif parsed_path.path == '/enable':
                 self.server.smz_web_server.runtime.enable()

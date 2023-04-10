@@ -5,8 +5,35 @@
 
 <body>
 
+<div>
+<button type="button" onclick="audio_input_refresh_onclick()">Refresh</button>
+<select id="audio_input_select"></select>
 <button type="button" onclick="on_onclick()">On</button>
 <button type="button" onclick="off_onclick()">Off</button>
+<span id="audio_input_display"></span>
+<span id="operation_display"></span>
+</div>
+
+<hr/>
+
+<table>
+<tr><td>Off &gt; on vol</td ><td><input id="thereshold_off_on_vol_input" /></td><td id="thereshold_off_on_vol_display" ></td></tr>
+<tr><td>Off &gt; on time</td><td><input id="thereshold_off_on_time_input"/></td><td id="thereshold_off_on_time_display"></td></tr>
+<tr><td>On &gt; off vol</td ><td><input id="thereshold_on_off_vol_input" /></td><td id="thereshold_on_off_vol_display" ></td></tr>
+<tr><td>On &gt; off time</td><td><input id="thereshold_on_off_time_input"/></td><td id="thereshold_on_off_time_display"></td></tr>
+</table>
+
+<hr/>
+
+<table>
+<tr><td>Time sent</td><td id="time_sent_display"></td></tr>
+<tr><td>Byte sent</td><td id="byte_sent_display"></td></tr>
+</table>
+
+<hr/>
+
+<!-- subtitle -->
+<div id="subtitle_display"></div>
 
 <script>
 function on_onclick(){
@@ -18,6 +45,44 @@ function off_onclick(){
     console.log('off_onclick');
     fetch('/disable');
 }
+
+async function main(){
+    while (true){
+        try {
+            await updateStatus();
+        } catch (e) {
+            console.log(e);
+        }
+    }
+}
+
+let last_status_hash = '';
+async function updateStatus(){
+    let response = await fetchWithTimeout('/status?last_status_hash='+last_status_hash, {timeout:2000});
+    let data = await response.json();
+    console.log(data);
+    last_status_hash = data.status_hash;
+    for (let key in data.status){
+        let element = document.getElementById(key+'_display');
+        if (element){
+            element.innerHTML = data.status[key];
+        }
+    }
+}
+
+async function fetchWithTimeout(url, options = {}) {
+    const { timeout = 8000 } = options;
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+    });
+    clearTimeout(id);
+    return response;
+}
+
+main();
 </script>
 </body>
 </html>

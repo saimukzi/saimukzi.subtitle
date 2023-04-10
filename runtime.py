@@ -1,4 +1,5 @@
 import hashlib
+import json
 # import stt
 import audio_listener
 import threading
@@ -14,9 +15,13 @@ class Runtime:
         self.text = ''
         self.text_md5 = hashlib.md5(self.text.encode('utf-8')).hexdigest()
         self.main_lock = threading.Condition()
+        self.status = {}
+        self.status_hash = hashlib.md5(json.dumps(self.status).encode('utf-8')).hexdigest()
 
         self.audio_listener = None
         self.translation_agent = None
+
+        self.update_status('operation','OFF')
 
     def run(self):
         try:
@@ -43,6 +48,7 @@ class Runtime:
         self.web_server.stop()
 
     def enable(self):
+        self.update_status('operation','> ON')
         with self.main_lock:
             if self.audio_listener is None:
                 self.audio_listener = audio_listener.AudioListener(self)
@@ -51,8 +57,10 @@ class Runtime:
 
             self.translation_agent.start()
             self.audio_listener.start()
+        self.update_status('operation','ON')
 
     def disable(self):
+        self.update_status('operation','> OFF')
         with self.main_lock:
             if self.audio_listener is not None:
                 self.audio_listener.stop()
@@ -60,6 +68,7 @@ class Runtime:
             if self.translation_agent is not None:
                 self.translation_agent.stop()
                 self.translation_agent = None
+        self.update_status('operation','OFF')
 
     # def start_audio_listener(self):
     #     self.audio_listener = audio_listener.AudioListener(self)
@@ -91,6 +100,14 @@ class Runtime:
         with self.main_lock:
             self.text = text
             self.text_md5 = hashlib.md5(self.text.encode('utf-8')).hexdigest()
+            self.update_status('subtitle', text)
+            self.main_lock.notify()
+
+    def update_status(self, key, value):
+        with self.main_lock:
+            self.status[key] = value
+            status_json = json.dumps(self.status)
+            self.status_hash = hashlib.md5(status_json.encode('utf-8')).hexdigest()
             self.main_lock.notify()
 
 
