@@ -50,31 +50,46 @@ class WebServer(BaseHTTPRequestHandler):
 class MyRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
-        parsed_path = urlparse(self.path)
-        print(parsed_path)
-        if parsed_path.path == '/text':
-            parsed_query = parse_qs(parsed_path.query)
-            if 'last_text_md5' in parsed_query:
-                last_text_md5 = parsed_query['last_text_md5'][0]
-                with self.server.smz_web_server.main_lock:
-                    if last_text_md5 == self.server.smz_web_server.runtime.text_md5:
-                        self.server.smz_web_server.main_lock.wait(timeout=1)
-            self.send_response(200)
-            self.send_header('Content-type', 'text/json')
-            self.end_headers()
-            text = self.server.smz_web_server.runtime.text
-            text_md5 = self.server.smz_web_server.runtime.text_md5
-            data = {'text': text, 'text_md5': text_md5}
-            self.wfile.write(bytes(json.dumps(data), "utf-8"))
-        else:
-            fn = parsed_path.path[1:]
-            if fn in self.server.smz_web_server.html_dict:
+        try:
+            parsed_path = urlparse(self.path)
+            print(parsed_path)
+            if parsed_path.path == '/text':
+                parsed_query = parse_qs(parsed_path.query)
+                if 'last_text_md5' in parsed_query:
+                    last_text_md5 = parsed_query['last_text_md5'][0]
+                    with self.server.smz_web_server.main_lock:
+                        if last_text_md5 == self.server.smz_web_server.runtime.text_md5:
+                            self.server.smz_web_server.main_lock.wait(timeout=1)
                 self.send_response(200)
-                self.send_header('Content-type', 'text/html')
+                self.send_header('Content-type', 'text/json')
                 self.end_headers()
-                self.wfile.write(self.server.smz_web_server.html_dict[fn])
+                text = self.server.smz_web_server.runtime.text
+                text_md5 = self.server.smz_web_server.runtime.text_md5
+                data = {'text': text, 'text_md5': text_md5}
+                self.wfile.write(bytes(json.dumps(data), "utf-8"))
+            elif parsed_path.path == '/enable':
+                self.server.smz_web_server.runtime.enable()
+                self.send_response(200)
+                self.send_header('Content-type', 'text/json')
+                self.end_headers()
+                self.wfile.write(bytes('{"result":"OK"}', "utf-8"))
+            elif parsed_path.path == '/disable':
+                self.server.smz_web_server.runtime.disable()
+                self.send_response(200)
+                self.send_header('Content-type', 'text/json')
+                self.end_headers()
+                self.wfile.write(bytes('{"result":"OK"}', "utf-8"))
             else:
-                self.send_response(404)
-                self.send_header('Content-type', 'text/plain')
-                self.end_headers()
-                self.wfile.write(bytes('Not found', "utf-8"))
+                fn = parsed_path.path[1:]
+                if fn in self.server.smz_web_server.html_dict:
+                    self.send_response(200)
+                    self.send_header('Content-type', 'text/html')
+                    self.end_headers()
+                    self.wfile.write(self.server.smz_web_server.html_dict[fn])
+                else:
+                    self.send_response(404)
+                    self.send_header('Content-type', 'text/plain')
+                    self.end_headers()
+                    self.wfile.write(bytes('Not found', "utf-8"))
+        except:
+            traceback.print_exc()

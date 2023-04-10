@@ -15,16 +15,14 @@ class Runtime:
         self.text_md5 = hashlib.md5(self.text.encode('utf-8')).hexdigest()
         self.main_lock = threading.Condition()
 
+        self.audio_listener = None
+        self.translation_agent = None
+
     def run(self):
         try:
             self.running = True
 
             self.start_web_server()
-            self.audio_listener = audio_listener.AudioListener(self)
-            self.translation_agent = translation_agent.TranslationAgent(self)
-
-            self.translation_agent.start()
-            self.audio_listener.start()
 
             self.wait()
         except:
@@ -32,10 +30,7 @@ class Runtime:
         finally:
             self.running = False
 
-            if self.audio_listener is not None:
-                self.audio_listener.stop()
-            if self.translation_agent is not None:
-                self.translation_agent.stop()
+            self.disable()
             self.stop_web_server()
 
         # self.stop_speech_to_text()
@@ -46,6 +41,25 @@ class Runtime:
 
     def stop_web_server(self):
         self.web_server.stop()
+
+    def enable(self):
+        with self.main_lock:
+            if self.audio_listener is None:
+                self.audio_listener = audio_listener.AudioListener(self)
+            if self.translation_agent is None:
+                self.translation_agent = translation_agent.TranslationAgent(self)
+
+            self.translation_agent.start()
+            self.audio_listener.start()
+
+    def disable(self):
+        with self.main_lock:
+            if self.audio_listener is not None:
+                self.audio_listener.stop()
+                self.audio_listener = None
+            if self.translation_agent is not None:
+                self.translation_agent.stop()
+                self.translation_agent = None
 
     # def start_audio_listener(self):
     #     self.audio_listener = audio_listener.AudioListener(self)

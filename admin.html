@@ -1,0 +1,23 @@
+<html>
+<head>
+<title>Admin</title>
+</head>
+
+<body>
+
+<button type="button" onclick="on_onclick()">On</button>
+<button type="button" onclick="off_onclick()">Off</button>
+
+<script>
+function on_onclick(){
+    console.log('on_onclick');
+    fetch('/enable');
+}
+
+function off_onclick(){
+    console.log('off_onclick');
+    fetch('/disable');
+}
+</script>
+</body>
+</html>

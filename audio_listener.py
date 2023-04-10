@@ -13,6 +13,7 @@ class AudioListener(object):
         self._audio_stream = None
 
     def start(self):
+        print('Starting audio listener...')
         assert(self._audio_stream is None)
 
         self._audio_interface = pyaudio.PyAudio()
@@ -50,8 +51,10 @@ class AudioListener(object):
             frames_per_buffer=CHUNK,
             stream_callback=self._stream_callback,
         )
+        print('Audio listener started')
 
     def stop(self):
+        print('Stopping audio listener...')
         if self._audio_stream is not None:
             self._audio_stream.stop_stream()
             self._audio_stream.close()
@@ -60,6 +63,7 @@ class AudioListener(object):
             self._audio_interface = None
         if self.runtime.translation_agent is not None:
             self.runtime.translation_agent.on_audio_listener_stopped()
+        print('Audio listener stopped')
 
     def _stream_callback(self, in_data, frame_count, time_info, status_flags):
         if self.runtime.running:

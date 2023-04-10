@@ -17,8 +17,8 @@ class TranslationAgent:
         self.init_args = runtime.init_args
         self.main_lock = runtime.main_lock
 
-        # self.audio_buffer = queue.Queue()
-        self.audio_buffer = None
+        self.audio_buffer = queue.Queue()
+        # self.audio_buffer = None
         self.preactive_buffer = deque()
 
         self.enabled = False
@@ -26,27 +26,48 @@ class TranslationAgent:
         # self.state_time = None
 
         self.thread = None
-        self.thread_lock = threading.Condition()
+        # self.thread_lock = threading.Condition()
 
     def start(self):
-        with self.thread_lock:
+        print('Starting TranslationAgent...')
+        with self.runtime.main_lock:
             if self.thread is not None:
                 return
+            self.enabled = True
             self.thread = threading.Thread(target=self.run)
             self.thread.start()
+        print('TranslationAgent started')
 
     def stop(self):
-        with self.thread_lock:
-            if self.thread is None:
-                return
-            self.thread.join()
-            self.thread = None
+        print('Stopping TranslationAgent...')
+
+        try:
+
+            with self.main_lock:
+                if self.thread is None:
+                    return
+                self.enabled = False
+                thread = self.thread
+
+            print('OTOYRNUTQL')
+
+            self.audio_buffer.put(None)
+
+            print('AMJYXFGPVA')
+            thread.join()
+
+            print('EVTPQTPSQL')
+
+            with self.main_lock:
+                self.thread = None
+
+        except:
+            traceback.print_exc()
+
+        print('TranslationAgent stopped')
 
     def run(self):
         try:
-            with self.main_lock:
-                self.audio_buffer = queue.Queue()
-
             client = speech.SpeechClient()
             config = speech.RecognitionConfig(
                 encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
@@ -58,12 +79,12 @@ class TranslationAgent:
                 config=config, interim_results=True
             )
 
-            while self.runtime.running:
+            while self.is_running():
                 print('Listening...')
 
                 audio_generator = self.audio_generator()
 
-                if not self.runtime.running:
+                if not self.is_running():
                     break
 
                 print('Processing...')
@@ -77,7 +98,7 @@ class TranslationAgent:
 
                 for response in responses:
 
-                    if not self.runtime.running:
+                    if not self.is_running():
                         break
 
                     if not response.results:
@@ -103,27 +124,20 @@ class TranslationAgent:
 
                 print('Finished listening')
 
-            print('SpeechToText thread finished')
+            print('HEOULTFDFB SpeechToText thread finished')
         except:
             traceback.print_exc()
             with self.main_lock:
                 self.runtime.running = False
-                self.runtime.main_lock.notify()
-        finally:
-            with self.main_lock:
-                self.audio_buffer = None
+                self.main_lock.notify()
+
+        print('NTZALJQJYF')
 
     def on_audio_listener_data(self, in_data):
-        with self.main_lock:
-            audio_buffer = self.audio_buffer
-        if audio_buffer is None: return
-        audio_buffer.put(in_data)
+        self.audio_buffer.put(in_data)
 
     def on_audio_listener_stopped(self):
-        with self.main_lock:
-            audio_buffer = self.audio_buffer
-        if audio_buffer is None: return
-        audio_buffer.put(None)
+        self.audio_buffer.put(None)
 
 
     def audio_generator(self):
@@ -136,12 +150,8 @@ class TranslationAgent:
 
 
     def _audio_buffer_generator(self):
-        with self.main_lock:
-            audio_buffer = self.audio_buffer
-        if audio_buffer is None: return
-
-        while self.runtime.running:
-            content = audio_buffer.get()
+        while self.is_running():
+            content = self.audio_buffer.get()
             if content is None: break
             yield content
 
@@ -164,7 +174,7 @@ class TranslationAgent:
             if context_diff >= self.init_args.speech_threshold:
                 break
 
-        if not self.runtime.running:
+        if not self.is_running():
             return
         
         for c in self.preactive_buffer:
@@ -213,6 +223,9 @@ class TranslationAgent:
     def _join_data_generator(self, generator):
         ret = JoinDataGenerator(generator)
         return ret
+
+    def is_running(self):
+        return self.runtime.running and self.enabled
 
 
 class JoinDataGenerator:
