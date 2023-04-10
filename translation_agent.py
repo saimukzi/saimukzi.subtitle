@@ -31,9 +31,9 @@ class TranslationAgent:
     def start(self):
         print('Starting TranslationAgent...')
         with self.runtime.main_lock:
+            self.enabled = True
             if self.thread is not None:
                 return
-            self.enabled = True
             self.thread = threading.Thread(target=self.run)
             self.thread.start()
         print('TranslationAgent started')
@@ -44,9 +44,9 @@ class TranslationAgent:
         try:
 
             with self.main_lock:
+                self.enabled = False
                 if self.thread is None:
                     return
-                self.enabled = False
                 thread = self.thread
 
             print('OTOYRNUTQL')
@@ -54,7 +54,9 @@ class TranslationAgent:
             self.audio_buffer.put(None)
 
             print('AMJYXFGPVA')
-            thread.join()
+            with self.main_lock:
+                while thread.is_alive():
+                    self.main_lock.wait(timeout=0.1)
 
             print('EVTPQTPSQL')
 
@@ -81,6 +83,7 @@ class TranslationAgent:
 
             while self.is_running():
                 print('Listening...')
+                self.runtime.update_status('api_state', 'WAIT')
 
                 audio_generator = self.audio_generator()
 
@@ -88,6 +91,7 @@ class TranslationAgent:
                     break
 
                 print('Processing...')
+                self.runtime.update_status('api_state', 'ACTIVE')
 
                 requests = (
                     speech.StreamingRecognizeRequest(audio_content=content)
@@ -123,6 +127,9 @@ class TranslationAgent:
                     #         self.state_time = time.time()
 
                 print('Finished listening')
+                self.runtime.update_status('api_state', 'END')
+
+            self.runtime.update_status('api_state', 'OFF')
 
             print('HEOULTFDFB SpeechToText thread finished')
         except:
@@ -166,27 +173,36 @@ class TranslationAgent:
 
 
     def _noise_filter_generator(self, generator):
+        self.runtime.update_status('vol_state', 'WAIT')
+
         # wait noise cotent
+        content = None
         for c in generator:
-            content = c
-            content_np = np.frombuffer(content, dtype=np.int16)
-            content_np = content_np.astype(np.int32)
-            context_diff = content_np.max() - content_np.min()
-            if context_diff >= self.runtime.thereshold_off_on_vol:
+            c_np = np.frombuffer(c, dtype=np.int16)
+            c_np = c_np.astype(np.int32)
+            c_diff = c_np.max() - c_np.min()
+            if c_diff >= self.runtime.thereshold_off_on_vol:
+                content = c
                 break
+
+        if content is None:
+            return
 
         if not self.is_running():
             return
-        
+
+        self.runtime.update_status('vol_state', 'PREACTIVE')
+
         for c in self.preactive_buffer:
             yield c
         yield content
 
+        self.runtime.update_status('vol_state', 'ACTIVE')
+
         # wait silence
         silence_buffer = deque()
         silence_count = 0
-        for c in generator:
-            content = c
+        for content in generator:
             content_np = np.frombuffer(content, dtype=np.int16)
             content_np = content_np.astype(np.int32)
             context_diff = content_np.max() - content_np.min()
@@ -194,14 +210,19 @@ class TranslationAgent:
                 silence_count += 1
             else:
                 silence_count = 0
+
             if silence_count < self.runtime.thereshold_on_pause_time:
+                self.runtime.update_status('vol_state', 'ACTIVE')
                 while len(silence_buffer) > 0:
                     yield silence_buffer.popleft()
                 yield content
             elif silence_count < self.runtime.thereshold_on_off_time:
+                self.runtime.update_status('vol_state', 'SILENCE')
                 silence_buffer.append(content)
             else:
                 break
+        
+        self.runtime.update_status('vol_state', 'END')
 
 
     def _wait_generator(self, generator):
@@ -269,5 +290,5 @@ class JoinDataGenerator:
             self.lock.notify()
         # print('JoinDataGenerator finished')
 
-    def join(self):
-        self.thread.join()
+    # def join(self):
+    #     self.thread.join()

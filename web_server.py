@@ -1,4 +1,5 @@
 import base64
+import copy
 import audio_listener
 import hashlib
 from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
@@ -89,8 +90,8 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-type', 'text/json')
                 self.end_headers()
                 with self.server.smz_web_server.main_lock:
-                    status = self.server.smz_web_server.runtime.status
-                    status_hash = self.server.smz_web_server.runtime.status_hash
+                    status = copy.deepcopy(self.server.smz_web_server.runtime.status)
+                    status_hash = copy.deepcopy(self.server.smz_web_server.runtime.status_hash)
                 data = {'status': status, 'status_hash': status_hash}
                 self.wfile.write(bytes(json.dumps(data), "utf-8"))
             elif parsed_path.path == '/audio_input_device_list':

@@ -120,11 +120,13 @@ class Runtime:
             self.main_lock.notify()
 
     def update_status(self, key, value):
+        print('Update status: {} = {} START'.format(key, value))
         with self.main_lock:
             self.status[key] = value
             status_json = json.dumps(self.status)
             self.status_hash = hashlib.md5(status_json.encode('utf-8')).hexdigest()
             self.main_lock.notify()
+        print('Update status: {} = {} END'.format(key, value))
 
     def update_status_dict(self, status_dict):
         with self.main_lock:
