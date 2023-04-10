@@ -186,9 +186,11 @@ class TranslationAgent:
                 break
 
         if content is None:
+            self.runtime.update_status('vol_state', 'END')
             return
 
         if not self.is_running():
+            self.runtime.update_status('vol_state', 'END')
             return
 
         self.runtime.update_status('vol_state', 'PREACTIVE')
