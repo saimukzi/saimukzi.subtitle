@@ -1,5 +1,4 @@
 Control panel
-- show time/byte sent
 - show active
 - config sample storage path
 - config google / azure STT

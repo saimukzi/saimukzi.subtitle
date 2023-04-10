@@ -146,6 +146,7 @@ class TranslationAgent:
         ret = self._noise_filter_generator(ret)
         ret = self._wait_generator(ret)
         ret = self._join_data_generator(ret)
+        ret = self._stat_generator(ret)
         return ret
 
 
@@ -223,6 +224,11 @@ class TranslationAgent:
     def _join_data_generator(self, generator):
         ret = JoinDataGenerator(generator)
         return ret
+
+    def _stat_generator(self, generator):
+        for content in generator:
+            self.runtime.update_stat(len(content))
+            yield content
 
     def is_running(self):
         return self.runtime.running and self.enabled

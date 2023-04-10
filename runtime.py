@@ -18,12 +18,13 @@ class Runtime:
         self.status = {} # for web server to get value, no use in server side logic
         self.status_hash = hashlib.md5(json.dumps(self.status).encode('utf-8')).hexdigest()
         self.audio_input_device_hash = ''
+        self.stat_byte_sent = 0
 
         self.audio_listener = None
         self.translation_agent = None
 
         self.update_status('operation','OFF')
-        self.set_config({
+        self.set_config_dict({
             'thereshold_off_on_vol': self.init_args.speech_threshold,
             'thereshold_off_on_time': 5,
             'thereshold_on_off_vol': self.init_args.speech_threshold,
@@ -125,14 +126,18 @@ class Runtime:
             self.status_hash = hashlib.md5(status_json.encode('utf-8')).hexdigest()
             self.main_lock.notify()
 
-    def set_config(self, config_dict):
+    def update_status_dict(self, status_dict):
         with self.main_lock:
-            for key, value in config_dict.items():
-                setattr(self, key, value)
-                self.status[key] = value
+            self.status.update(status_dict)
             status_json = json.dumps(self.status)
             self.status_hash = hashlib.md5(status_json.encode('utf-8')).hexdigest()
             self.main_lock.notify()
+
+    def set_config_dict(self, config_dict):
+        with self.main_lock:
+            for key, value in config_dict.items():
+                setattr(self, key, value)
+            self.update_status_dict(config_dict)
 
     def load_audio_input_device_hash(self):
         if self.init_args.device is None:
@@ -146,6 +151,14 @@ class Runtime:
             return
         print(audio_input_device_list[0])
         self.set_audio_input_device_hash(audio_input_device_list[0]['hash'])
+
+    def update_stat(self, content_len):
+        with self.main_lock:
+            self.stat_byte_sent += content_len
+            self.update_status_dict({
+                'byte_sent': self.stat_byte_sent,
+                'time_sent': self.stat_byte_sent/audio_listener.RATE/2,
+            })
 
 
 def run(init_args):
