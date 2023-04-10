@@ -1,0 +1,15 @@
+Control panel
+- on/off
+- show subtitle
+- show time/byte sent
+- config audio input src
+- config off > on thereshold
+- config on > off thereshold
+- config off > on time len
+- config on > off time len
+- config sample storage path
+- config google / azure STT
+
+Sample storge
+
+Support MS Azure STT
