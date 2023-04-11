@@ -1,7 +1,9 @@
 import copy
 import hashlib
 import json
+import numpy as np
 import pyaudio
+import collections
 
 RATE = 16000
 CHUNK = int(RATE / 10)  # 100ms
@@ -14,6 +16,7 @@ class AudioListener(object):
 
         self._audio_interface = None
         self._audio_stream = None
+        self._vol_history = collections.deque()
 
     def start(self):
         print('Starting audio listener...')
@@ -60,10 +63,20 @@ class AudioListener(object):
         print('Audio listener stopped')
 
     def _stream_callback(self, in_data, frame_count, time_info, status_flags):
+        vol = self._cal_vol(in_data)
+        self._vol_history.append(vol)
+        if len(self._vol_history) > 10:
+            self._vol_history.popleft()
+        self.runtime.update_status('vol', vol)
         if self.runtime.running:
             if self.runtime.translation_agent is not None:
                 self.runtime.translation_agent.on_audio_listener_data(in_data)
         return None, pyaudio.paContinue
+
+    def _cal_vol(self, in_data):
+        in_data_np = np.frombuffer(in_data, dtype=np.int16)
+        in_data_np = in_data_np.astype(np.int32)
+        return int(in_data_np.max() - in_data_np.min())
 
 def get_audio_input_device_list():
     audio_interface = pyaudio.PyAudio()
