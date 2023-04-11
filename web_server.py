@@ -127,7 +127,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-type', 'text/json')
                 self.end_headers()
                 self.wfile.write(bytes('{"result":"OK"}', "utf-8"))
-            elif parsed_path.path == '/set_config':
+            elif parsed_path.path == '/set_config_dict':
                 parsed_query = parse_qs(parsed_path.query)
                 if not 'config' in parsed_query:
                     self.send_response(400)
@@ -139,7 +139,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 config_dict_json = base64.b64decode(config_dict_json_b64).decode('utf-8')
                 config_dict = json.loads(config_dict_json)
                 print(config_dict)
-                self.server.smz_web_server.runtime.set_config(config_dict)
+                self.server.smz_web_server.runtime.set_config_dict(config_dict)
                 self.send_response(200)
                 self.send_header('Content-type', 'text/json')
                 self.end_headers()

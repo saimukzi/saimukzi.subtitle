@@ -111,10 +111,10 @@ async function refresh_thereshold(){
     document.getElementById('thereshold_on_off_time_input').value = data.status.thereshold_on_off_time;
 }
 
-async function set_config(dict_input){
+async function set_config_dict(dict_input){
     let dict_input_json = JSON.stringify(dict_input);
     let dict_input_json_b64 = btoa(dict_input_json);
-    let query_str = '/set_config?config='+dict_input_json_b64;
+    let query_str = '/set_config_dict?config='+dict_input_json_b64;
     return await fetch(query_str);
 }
 
@@ -126,7 +126,7 @@ async function thereshold_update_onclick(){
         'thereshold_on_pause_time':Number(document.getElementById('thereshold_on_pause_time_input').value),
         'thereshold_on_off_time':Number(document.getElementById('thereshold_on_off_time_input').value),
     };
-    let response = await set_config(dict_input);
+    let response = await set_config_dict(dict_input);
     let status = response.status;
     if (status != 200){
         alert('Failed to update thereshold');
