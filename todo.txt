@@ -1,5 +1,4 @@
 Control panel
-- show volume
 - config sample storage path
 - config google / azure STT
 - config language code
