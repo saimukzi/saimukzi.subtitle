@@ -1,8 +1,9 @@
 Control panel
-- show active
+- show volume
 - config sample storage path
 - config google / azure STT
 - config language code
+- seperate audio and translation on/off
 
 Sample storge
 
